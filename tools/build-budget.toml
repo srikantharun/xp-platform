@@ -1,0 +1,21 @@
+# Build cost budgets checked by `run_step.py budget --preset <name>` after a build (reused from
+# xp-pricer). Platform-owned: a generated repo reads platform/tools/build-budget.toml, so a quant
+# cannot raise their own budget. Seconds are wall-clock per translation unit from .ninja_log.
+
+[default]
+max_tu_seconds = 60              # QuantLib headers dominate; pricer TUs measured well under this
+max_total_compile_seconds = 240  # all pricers + tests, serial
+
+[default.max_artifact_mb]        # paths under build/<preset>/; absent pricers are skipped
+"pricers/black_scholes/libblack_scholes.a" = 40
+"pricers/bachelier/libbachelier.a" = 10
+"pricers/american_binomial/libamerican_binomial.a" = 10
+"pricers/barrier_mc/libbarrier_mc.a" = 10
+
+[preset.ci-linux-asan-ubsan]
+max_tu_seconds = 120
+max_total_compile_seconds = 480
+
+[preset.ci-linux-tsan]
+max_tu_seconds = 120
+max_total_compile_seconds = 480

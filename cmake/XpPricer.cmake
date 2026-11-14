@@ -85,5 +85,20 @@ function(xp_pricer)
     target_link_libraries(${_tests} PRIVATE xp::${P_NAME} Catch2::Catch2 ${P_USES})
     xp_configure_target(${_tests})
     catch_discover_tests(${_tests} TEST_PREFIX "unit.${P_NAME}." DISCOVERY_MODE PRE_TEST)
+
+    # Flaky-test quarantine: <repo>/quarantine.txt (owner + issue + 14-day expiry, checked by
+    # testreview). Listed tests get the ctest label `quarantine`: the CI gate skips them
+    # (ctest -LE quarantine), a report-only run still executes them. Each pricer directory
+    # labels only its own tests (prefix unit.<name>.), so the shared file is filtered here.
+    # Must stay AFTER catch_discover_tests: labels are applied once discovery has run.
+    set(_qfile "${PROJECT_SOURCE_DIR}/quarantine.txt")
+    if(EXISTS "${_qfile}")
+      set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_qfile}")
+      file(STRINGS "${_qfile}" _qlines REGEX "^unit\\.${P_NAME}\\.")
+      list(JOIN _qlines "\n" _qmine)
+      set(_qown "${CMAKE_CURRENT_BINARY_DIR}/quarantine-${P_NAME}.txt")
+      file(WRITE "${_qown}" "${_qmine}\n")
+      xp_quarantine_tests("${_qown}")
+    endif()
   endif()
 endfunction()

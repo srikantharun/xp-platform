@@ -4,7 +4,7 @@
     review.py --repo <generated-repo> --platform <pinned xp-platform checkout> --tag <platform tag>
               [--base <merge-base sha>] [--report review-report.md]
 
-Run by the `review` job of ci/review.yml from the PINNED xp-platform checkout. Two checks:
+Run by the `review` job of templates/review.yml from the PINNED xp-platform checkout. Two checks:
 
   review/guards   the four ownership guards (guards/run_guards.sh, 4a–4d): pricer CMakeLists
                   allow-list, no build files outside platform/, platform/ == pinned tag,

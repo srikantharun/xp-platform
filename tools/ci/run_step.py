@@ -31,11 +31,14 @@ from pathlib import Path
 EXIT_CODES = {"format": 81, "lint": 82, "build": 83, "test": 84, "zero_tests": 85, "budget": 86}
 EXIT_INFRA = 1
 
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "tools"))  # stdlib-only xptools modules, no install needed
+# Two roots: the PLATFORM this script ships in (platform/ in a generated repo) and the PROJECT
+# being built (the CI checkout = cwd). Presets, build/<preset>/ and sources are the project's.
+PLATFORM = Path(__file__).resolve().parents[2]
+ROOT = Path(os.environ.get("XP_PROJECT_ROOT") or Path.cwd()).resolve()
+sys.path.insert(0, str(PLATFORM / "tools"))  # stdlib-only xptools modules, no install needed
 CXX_GLOBS = ["*.cpp", "*.hpp", "*.h"]
 PY_PATHS = [p for p in ("tools", "python") if (ROOT / p).is_dir()]  # template services: no python/
-TIDY_DIRS = ("src/", "tools/", "tests/", "python/")
+TIDY_DIRS = ("pricers/", "src/", "tools/", "tests/", "python/")
 
 
 class StepError(Exception):
@@ -86,6 +89,8 @@ def tag_version() -> str | None:
 
 
 def check_tag_matches_manifest(version: str) -> None:
+    if not (ROOT / "vcpkg.json").is_file():
+        return  # generated repo: version comes from the git tag only; vcpkg.json is platform's
     manifest = json.loads((ROOT / "vcpkg.json").read_text())["version-semver"]
     if manifest != version:
         raise StepError(
@@ -177,7 +182,7 @@ def write_metrics(preset: str, wall_seconds: float) -> None:
     print(f"build metrics: {json.dumps(metrics)}", flush=True)
 
 
-QUARANTINE_LABEL = "quarantine"  # tests/quarantine.txt via cmake/Quarantine.cmake
+QUARANTINE_LABEL = "quarantine"  # quarantine.txt via cmake/Quarantine.cmake (XpPricer)
 
 
 def count_tests(preset: str) -> int:
@@ -207,7 +212,7 @@ def step_test_quarantined(args: argparse.Namespace) -> None:
            "--output-junit", "junit-quarantine.xml"]  # fmt: skip
     result = run(cmd)
     state = "all passed (consider un-quarantining)" if result.returncode == 0 else "still failing"
-    print(f"quarantined tests: {state}; see tests/quarantine.txt for owners and expiry", flush=True)
+    print(f"quarantined tests: {state}; see quarantine.txt for owners and expiry", flush=True)
 
 
 def step_package(args: argparse.Namespace) -> None:

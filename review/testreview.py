@@ -3,7 +3,7 @@
 
     testreview.py --repo <generated-repo> --base <merge-base sha> [--report testreview-report.md]
 
-Run by the `testreview` job of ci/review.yml from the PINNED xp-platform checkout, so an MR
+Run by the `testreview` job of templates/review.yml from the PINNED xp-platform checkout, so an MR
 cannot weaken the rules that review it. Four checks:
 
   testreview/code-needs-tests  a pricer's code changed but none of its test files did      BLOCK

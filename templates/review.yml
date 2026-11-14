@@ -1,7 +1,7 @@
-# ci/review.yml — GitLab CI/CD component: rule-based MR review for a generated quant repo.
+# templates/review.yml — GitLab CI/CD component: rule-based MR review for a generated quant repo.
 #
 #   include:
-#     - component: $CI_SERVER_FQDN/platform/xp-platform/review@platform-v1.1.0
+#     - component: $CI_SERVER_FQDN/platform/xp-platform/review@platform-v1.2.0
 #       inputs: { platform_repo: $CI_SERVER_URL/platform/xp-platform.git, image: $XP_REVIEW_IMAGE }
 #
 # Two MR-only jobs, both running the scripts from a fresh clone of xp-platform at the tag in
