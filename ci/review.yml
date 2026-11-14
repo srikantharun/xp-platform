@@ -1,0 +1,65 @@
+# ci/review.yml — GitLab CI/CD component: rule-based MR review for a generated quant repo.
+#
+#   include:
+#     - component: $CI_SERVER_FQDN/platform/xp-platform/review@platform-v1.1.0
+#       inputs: { platform_repo: $CI_SERVER_URL/platform/xp-platform.git, image: $XP_REVIEW_IMAGE }
+#
+# Two MR-only jobs, both running the scripts from a fresh clone of xp-platform at the tag in
+# .copier-answers.yml (platform_ref) — NOT from the MR's platform/ copy. An MR therefore cannot
+# weaken the rules that review it (same principle as the guards, 4c).
+#
+#   review      review/review.py      guards 4a–4d + semgrep/cpp-build.yml on changed files   exit 87
+#   testreview  review/testreview.py  code-needs-tests, golden-value, no-weakening, quarantine exit 88
+#
+# Exit codes extend the cpp-build contract (81–86): 87 review findings, 88 test-review findings,
+# 1 infrastructure (missing tool, bad base sha). Both jobs publish a Markdown report artifact.
+# The image needs python3, git and semgrep (the same semgrep version the rules are tested with).
+spec:
+  inputs:
+    platform_repo:
+      description: Git URL of xp-platform. The pinned tag is cloned from here.
+    image:
+      description: Image with python3 + git + semgrep (pin by digest).
+    stage:
+      default: review
+      description: Pipeline stage for both jobs (after build-test).
+---
+.xp-review-base:
+  stage: $[[ inputs.stage ]]
+  image:
+    name: $[[ inputs.image ]]
+    entrypoint: [""]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  needs: []
+  variables:
+    GIT_DEPTH: 0   # the merge-base commit must be present for the diff
+    XP_PINNED: $CI_PROJECT_DIR/.xp-platform-pinned
+  before_script:
+    - |
+      XP_TAG=$(sed -n 's/^platform_ref: *//p' .copier-answers.yml)
+      test -n "$XP_TAG" || { echo "no platform_ref in .copier-answers.yml"; exit 1; }
+      git clone --quiet --depth 1 --branch "$XP_TAG" "$[[ inputs.platform_repo ]]" "$XP_PINNED"
+      echo "review rules from xp-platform $XP_TAG ($(git -C "$XP_PINNED" rev-parse --short HEAD))"
+
+review:
+  extends: .xp-review-base
+  script:
+    - python3 "$XP_PINNED/review/review.py" --repo . --platform "$XP_PINNED" --tag "$XP_TAG"
+      --base "$CI_MERGE_REQUEST_DIFF_BASE_SHA" --report review-report.md
+  artifacts:
+    when: always
+    expire_in: 2 weeks
+    expose_as: review report
+    paths: [review-report.md]
+
+testreview:
+  extends: .xp-review-base
+  script:
+    - python3 "$XP_PINNED/review/testreview.py" --repo .
+      --base "$CI_MERGE_REQUEST_DIFF_BASE_SHA" --report testreview-report.md
+  artifacts:
+    when: always
+    expire_in: 2 weeks
+    expose_as: testreview report
+    paths: [testreview-report.md]
