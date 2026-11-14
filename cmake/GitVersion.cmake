@@ -6,9 +6,14 @@
 #           > "version-semver" in vcpkg.json (tarball builds without .git).
 
 set(XP_VERSION "" CACHE STRING "Override project version (X.Y.Z); normally derived from git tags")
+set(_XP_GITVERSION_DIR "${CMAKE_CURRENT_LIST_DIR}")  # dir of this file (platform/cmake)
 
 function(_xp_version_from_vcpkg out)
-  file(READ "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg.json" _manifest)
+  set(_mf "${_XP_GITVERSION_DIR}/../vcpkg.json")            # split layout: platform/vcpkg.json
+  if(NOT EXISTS "${_mf}")
+    set(_mf "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg.json")        # xp-pricer layout: ./vcpkg.json
+  endif()
+  file(READ "${_mf}" _manifest)
   string(JSON _v GET "${_manifest}" "version-semver")
   set(${out} "${_v}" PARENT_SCOPE)
 endfunction()
