@@ -34,7 +34,8 @@ spec:
   needs: []
   variables:
     GIT_DEPTH: 0   # the merge-base commit must be present for the diff
-    XP_PINNED: $CI_PROJECT_DIR/.xp-platform-pinned
+    # OUTSIDE the project dir: guard 4b walks the checkout and would flag the clone's presets.
+    XP_PINNED: /tmp/xp-platform-pinned-$CI_JOB_ID
   before_script:
     - |
       XP_TAG=$(sed -n 's/^platform_ref: *//p' .copier-answers.yml)
