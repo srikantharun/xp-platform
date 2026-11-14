@@ -11,7 +11,8 @@
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "XP_WARNINGS_AS_ERRORS": "ON",
-        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/platform/triplets"
+        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/platform/triplets",
+        "VCPKG_MANIFEST_DIR": "${sourceDir}/platform"
       }
     },
     {
