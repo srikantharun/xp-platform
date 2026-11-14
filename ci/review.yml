@@ -40,7 +40,7 @@ spec:
     - |
       XP_TAG=$(sed -n 's/^platform_ref: *//p' .copier-answers.yml)
       test -n "$XP_TAG" || { echo "no platform_ref in .copier-answers.yml"; exit 1; }
-      git clone --quiet --depth 1 --branch "$XP_TAG" "$[[ inputs.platform_repo ]]" "$XP_PINNED"
+      git -c advice.detachedHead=false clone --quiet --depth 1 --branch "$XP_TAG" "$[[ inputs.platform_repo ]]" "$XP_PINNED"
       echo "review rules from xp-platform $XP_TAG ($(git -C "$XP_PINNED" rev-parse --short HEAD))"
 
 review:
