@@ -20,8 +20,11 @@
 
 include_guard(GLOBAL)
 
-include(XpTarget)        # xp_configure_target: C++20, warnings, sanitizers, clang-tidy
-include(Quarantine)      # flaky-test quarantine for generated test targets
+include(CompilerWarnings) # defines xp_set_warnings
+include(Sanitizers)       # defines xp_enable_sanitizers
+include(StaticAnalyzers)  # defines xp_enable_static_analyzers
+include(XpTarget)         # xp_configure_target: uses the three modules above
+include(Quarantine)       # flaky-test quarantine for generated test targets
 
 # Platform FP-trap main, compiled into every pricer's tests so NaN/Inf arithmetic aborts
 # the test instead of returning a silently wrong price.
