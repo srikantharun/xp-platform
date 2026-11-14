@@ -1,0 +1,149 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "installDir": "${sourceDir}/build/${presetName}/install",
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "XP_WARNINGS_AS_ERRORS": "ON",
+        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/platform/triplets"
+      }
+    },
+    {
+      "name": "sccache",
+      "hidden": true,
+      "cacheVariables": { "CMAKE_CXX_COMPILER_LAUNCHER": "sccache" }
+    },
+    {
+      "name": "rhel8-gcc13",
+      "hidden": true,
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x64-linux-rhel8-gcc13",
+        "VCPKG_HOST_TRIPLET": "x64-linux-rhel8-gcc13",
+        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/platform/toolchains/linux-rhel8-gcc13.cmake"
+      }
+    },
+    {
+      "name": "rhel8-clang17",
+      "hidden": true,
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x64-linux-rhel8-clang17",
+        "VCPKG_HOST_TRIPLET": "x64-linux-rhel8-clang17",
+        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/platform/toolchains/linux-rhel8-clang17.cmake"
+      }
+    },
+    {
+      "name": "ubuntu-gcc",
+      "hidden": true,
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x64-linux-ubuntu-gcc",
+        "VCPKG_HOST_TRIPLET": "x64-linux-ubuntu-gcc",
+        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/platform/toolchains/linux-ubuntu-gcc.cmake"
+      }
+    },
+    {
+      "name": "linux-base",
+      "hidden": true,
+      "inherits": ["base", "sccache"],
+      "generator": "Ninja",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" }
+    },
+    {
+      "name": "dev-linux",
+      "displayName": "Linux developer (Debug)",
+      "inherits": ["linux-base", "rhel8-gcc13"],
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "ci-linux-gcc",
+      "displayName": "CI Linux gcc-toolset-13 (Release)",
+      "inherits": ["linux-base", "rhel8-gcc13"],
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "ci-linux-clang",
+      "displayName": "CI Linux clang 17 (Release)",
+      "inherits": ["linux-base", "rhel8-clang17"],
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "ci-ubuntu-gcc",
+      "displayName": "CI Ubuntu gcc (Release) [NEW platform — untested on this box]",
+      "inherits": ["linux-base", "ubuntu-gcc"],
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "ci-linux-asan-ubsan",
+      "displayName": "CI Linux clang 17 + ASan/UBSan",
+      "inherits": ["linux-base", "rhel8-clang17"],
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo", "XP_SANITIZERS": "address;undefined" }
+    },
+    {
+      "name": "ci-linux-tsan",
+      "displayName": "CI Linux clang 17 + TSan",
+      "inherits": ["linux-base", "rhel8-clang17"],
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo", "XP_SANITIZERS": "thread" }
+    },
+    {
+      "name": "ci-win-msvc",
+      "displayName": "CI Windows MSVC (run from a VS x64 developer prompt)",
+      "inherits": ["base", "sccache"],
+      "generator": "Ninja Multi-Config",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" },
+      "architecture": { "value": "x64", "strategy": "external" },
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "cl",
+        "CMAKE_CONFIGURATION_TYPES": "Release;Debug",
+        "VCPKG_TARGET_TRIPLET": "x64-windows-v143-static-md",
+        "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL",
+        "CMAKE_MSVC_DEBUG_INFORMATION_FORMAT": "$<$<CONFIG:Debug,RelWithDebInfo>:Embedded>"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "dev-linux", "configurePreset": "dev-linux" },
+    { "name": "ci-linux-gcc", "configurePreset": "ci-linux-gcc" },
+    { "name": "ci-linux-clang", "configurePreset": "ci-linux-clang" },
+    { "name": "ci-ubuntu-gcc", "configurePreset": "ci-ubuntu-gcc" },
+    { "name": "ci-linux-asan-ubsan", "configurePreset": "ci-linux-asan-ubsan" },
+    { "name": "ci-linux-tsan", "configurePreset": "ci-linux-tsan" },
+    { "name": "ci-win-msvc", "configurePreset": "ci-win-msvc", "configuration": "Release" }
+  ],
+  "testPresets": [
+    { "name": "test-base", "hidden": true, "output": { "outputOnFailure": true }, "execution": { "noTestsAction": "error", "stopOnFailure": false } },
+    { "name": "dev-linux", "inherits": "test-base", "configurePreset": "dev-linux" },
+    { "name": "ci-linux-gcc", "inherits": "test-base", "configurePreset": "ci-linux-gcc" },
+    { "name": "ci-linux-clang", "inherits": "test-base", "configurePreset": "ci-linux-clang" },
+    { "name": "ci-ubuntu-gcc", "inherits": "test-base", "configurePreset": "ci-ubuntu-gcc" },
+    { "name": "ci-linux-asan-ubsan", "inherits": "test-base", "configurePreset": "ci-linux-asan-ubsan", "environment": { "ASAN_OPTIONS": "detect_leaks=1:abort_on_error=1:strict_string_checks=1", "UBSAN_OPTIONS": "print_stacktrace=1:halt_on_error=1" } },
+    { "name": "ci-linux-tsan", "inherits": "test-base", "configurePreset": "ci-linux-tsan", "environment": { "TSAN_OPTIONS": "halt_on_error=1:second_deadlock_stack=1" } },
+    { "name": "ci-win-msvc", "inherits": "test-base", "configurePreset": "ci-win-msvc", "configuration": "Release" }
+  ],
+  "packagePresets": [
+    { "name": "ci-linux-gcc", "configurePreset": "ci-linux-gcc" },
+    { "name": "ci-ubuntu-gcc", "configurePreset": "ci-ubuntu-gcc" }
+  ],
+  "workflowPresets": [
+    {
+      "name": "ci-linux-gcc",
+      "steps": [
+        { "type": "configure", "name": "ci-linux-gcc" },
+        { "type": "build", "name": "ci-linux-gcc" },
+        { "type": "test", "name": "ci-linux-gcc" }
+      ]
+    },
+    {
+      "name": "ci-ubuntu-gcc",
+      "steps": [
+        { "type": "configure", "name": "ci-ubuntu-gcc" },
+        { "type": "build", "name": "ci-ubuntu-gcc" },
+        { "type": "test", "name": "ci-ubuntu-gcc" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "xp-pricer",
+  "version-semver": "0.2.0",
+  "description": "Sandbox C++20 option pricer on QuantLib (library, CLI, Python module).",
+  "builtin-baseline": "177e8175121536d414f405ed8b3099b325a42638",
+  "dependencies": [
+    {
+      "name": "quantlib",
+      "version>=": "1.44"
+    },
+    {
+      "name": "fmt",
+      "version>=": "12.2.1"
+    },
+    {
+      "name": "catch2",
+      "version>=": "3.16.1"
+    }
+  ]
+}

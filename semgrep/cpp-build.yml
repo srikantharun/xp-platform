@@ -1,0 +1,92 @@
+# .semgrep/cpp-build.yml — xp-pricer build-hygiene and C++ house rules, run by xp-ci-reviewer
+# on every MR (from the TARGET branch, so an MR cannot weaken the rules reviewing it).
+#   semgrep scan --config .semgrep/cpp-build.yml --metrics=off .
+# Severity: ERROR = BLOCK (fails the MR), WARNING = WARN, INFO = NIT.
+# metadata.rule is the stable id shared with the reviewer's rules, lessons and rubric.
+# CMake has no semgrep parser, so build rules use `generic` mode with regexes.
+# Test cases: cpp-build.{cpp,cmake,json} next to this file (`// ruleid:` / `// ok:`), run by
+# tools/ci/semgrep_check.sh in CI (job semgrep:rules). Add a case with every rule change.
+rules:
+  - id: xp-build-fast-math
+    languages: [generic]
+    severity: ERROR
+    message: >-
+      Fast-math flag: lets the compiler assume no NaN/Inf and reassociate sums, which breaks
+      put-call parity, NaN checks and the FP-trap tests. Never enable it, not even per file.
+    metadata: {rule: build/fast-math, category: build-hygiene}
+    paths:
+      include: ["CMakeLists.txt", "*.cmake", "CMakePresets.json", "*.cpp", "*.hpp", "*.h"]
+    pattern-regex: (-ffast-math|-Ofast\b|/fp:fast|-funsafe-math-optimizations|optimize\("fast-math"\))
+
+  - id: xp-build-absolute-path
+    languages: [generic]
+    severity: ERROR
+    message: >-
+      Absolute path in CMake: works on one machine only. Use vcpkg targets
+      (e.g. QuantLib::QuantLib) and paths relative to ${PROJECT_SOURCE_DIR}.
+    metadata: {rule: build/absolute-path, category: build-hygiene}
+    paths:
+      include: ["CMakeLists.txt", "*.cmake"]
+      exclude: ["cmake/toolchains/"]   # toolchain files own host prefixes and *_FLAGS_INIT
+    pattern-regex: (?<![\w$}])(/(?:opt|usr/local|home|root|tmp|mnt|srv|data)/[^\s")]*|[A-Za-z]:[\\/][^\s")]*)
+
+  - id: xp-build-raw-cxx-flags
+    languages: [generic]
+    severity: ERROR
+    message: >-
+      Raw CMAKE_<LANG>_FLAGS: applies to every target, configuration and preset (it leaked -O3
+      into ASan before). Use target_compile_options via xp_configure_target() or the presets.
+    metadata: {rule: build/raw-cxx-flags, category: build-hygiene}
+    paths:
+      include: ["CMakeLists.txt", "*.cmake"]
+      exclude: ["cmake/toolchains/"]   # toolchain files own host prefixes and *_FLAGS_INIT
+    pattern-regex: (?i)\b(set|string|list)\s*\(\s*(APPEND\s+)?CMAKE_(C|CXX)_FLAGS(_[A-Z]+)?\b
+
+  - id: xp-build-werror-disabled
+    languages: [generic]
+    severity: ERROR
+    message: Warnings-as-errors switched off. Fix or locally suppress the warning instead.
+    metadata: {rule: build/werror-removed, category: build-hygiene}
+    paths:
+      include: ["CMakeLists.txt", "*.cmake", "CMakePresets.json"]
+    # -Wno-error=<one-warning> is a targeted, allowed downgrade; bare -Wno-error is not.
+    pattern-regex: (XP_WARNINGS_AS_ERRORS"?\s*[:=]?\s*"?\s*(OFF|FALSE|0)\b|-Wno-error(?![=\w-])|COMPILE_WARNING_AS_ERROR\s+OFF)
+
+  - id: xp-cpp-catch-all
+    languages: [generic]
+    severity: WARNING
+    message: >-
+      catch (...) can swallow QuantLib::Error and return a default price. Catch
+      QuantLib::Error at the boundary and translate it.
+    metadata: {rule: cpp/exceptions, category: cpp-house-rules}
+    paths:
+      include: ["*.cpp", "*.hpp"]
+    pattern-regex: catch\s*\(\s*\.\.\.\s*\)
+
+  - id: xp-cpp-naked-new
+    languages: [generic]
+    severity: WARNING
+    message: Naked new/delete. Express ownership with std::unique_ptr or ext::shared_ptr.
+    metadata: {rule: cpp/ownership, category: cpp-house-rules}
+    paths:
+      include: ["src/**/*.cpp", "src/**/*.hpp", "include/**/*.hpp"]
+    pattern-regex: (\bnew\s+[A-Za-z_][\w:]*\s*[({]|\bdelete\s+\w)
+
+  - id: xp-cpp-quantlib-in-public-header
+    languages: [generic]
+    severity: ERROR
+    message: QuantLib header in a public header. QuantLib stays behind the pimpl in src/.
+    metadata: {rule: cpp/quantlib-in-public-header, category: cpp-house-rules}
+    paths:
+      include: ["include/xp/**"]
+    pattern-regex: '#\s*include\s*[<"]ql/'
+
+  - id: xp-cpp-float-equality
+    languages: [generic]
+    severity: INFO
+    message: Exact equality against a floating-point literal. Compare with a stated tolerance.
+    metadata: {rule: numerics/float-compare, category: cpp-house-rules}
+    paths:
+      include: ["src/**/*.cpp", "tests/**/*.cpp"]
+    # decimal (10.45, 1.) and exponent-only (1e-10) literals; integers (== 3) are fine.
+    pattern-regex: '[=!]=\s*-?(?:\d+\.\d*(?:[eE][-+]?\d+)?|\d+[eE][-+]?\d+)\b(?!\s*[*/])'
